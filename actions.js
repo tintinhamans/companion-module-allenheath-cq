@@ -4,7 +4,7 @@ export function getActionDefinitions(self) {
 	return {
 		mute: {
 			name: 'Mute',
-			description: 'Mute/Unmute a specific channel on the CQ ',
+			description: 'Mute/Unmute a specific channel on the CQ mixer',
 			options: [
 				{
 					type: 'dropdown',
@@ -36,8 +36,6 @@ export function getActionDefinitions(self) {
 
 				if (muteParam) {
 					self.mixer.setMuteStatus(muteParam.msb, muteParam.lsb, command)
-
-					self.mixer.sendMIDIGetMessage(parseInt(muteParam.msb, 16), parseInt(muteParam.lsb, 16))
 				}
 			},
 		},

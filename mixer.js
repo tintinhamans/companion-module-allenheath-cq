@@ -90,7 +90,6 @@ export class Mixer {
 			const { msb, lsb } = muteParameters[i]
 			const midiMessage = [0xb0, 0x63, parseInt(msb, 16), 0xb0, 0x62, parseInt(lsb, 16), 0xb0, 0x60, 0x7f]
 			this.sendMIDIMessage(midiMessage)
-			await delay(100)
 		}
 	}
 
@@ -334,6 +333,7 @@ export class Mixer {
 				break
 		}
 		this.sendMIDIMessage(message)
+		this.sendMIDIGetMessage(msb, lsb)
 	}
 
 	setAbsValue(msb, lsb, vc, vf) {
@@ -382,17 +382,30 @@ export class Mixer {
 		this.sendMIDIMessage(midiMessage)
 	}
 
-	sendMIDIMessage(hexMessage) {
+	#sendQueue = []
+	#sendPromise = Promise.resolve()
+
+	sendMIDIMessage(message) {
 		if (!this.tcpClient || this.tcpClient.destroyed) {
 			this.log('warning', `MIDI send failed: CQ mixer connection is closed`)
 			return
 		}
-		this.log(
-			'debug',
-			`Sending MIDI message: ${typeof hexMessage === 'string' ? hexMessage : Buffer.from(hexMessage).toString('hex')}`
-		)
-		let buffer = Buffer.from(hexMessage, 'hex')
-		this.tcpClient.write(buffer)
+
+		this.#sendQueue.push(message)
+		this.#sendPromise = this.#sendPromise.then(() => this.#processSendQueue())
+	}
+
+	async #processSendQueue() {
+		while (this.#sendQueue.length > 0) {
+			const message = this.#sendQueue.shift()
+			this.log(
+				'debug',
+				`Sending MIDI message: ${typeof message === 'string' ? message : Buffer.from(message).toString('hex')}`
+			)
+			let buffer = Buffer.from(message)
+			this.tcpClient.write(buffer)
+			await delay(100)
+		}
 	}
 
 	sendMIDIGetMessage(msb, lsb) {
